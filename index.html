@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokéVote — Vote pour ton Pokémon préféré</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #1b2030;
+    color: #e9ecf4;
+    font-family: 'Trebuchet MS', 'Segoe UI', Verdana, system-ui, sans-serif;
+    padding-bottom: 48px;
+  }
+  /* ── Boîtier Pokédex ── */
+  .dex {
+    background: linear-gradient(180deg, #c9302b, #a02420);
+    border-bottom: 6px solid #6e1714;
+    padding: 20px 24px 24px;
+    border-radius: 0 0 22px 22px;
+    max-width: 860px;
+    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  }
+  .dex-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .lens {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #eef4ff; border: 3px solid #6e1714;
+    display: grid; place-items: center;
+  }
+  .lens-inner {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #9fd0ff, #2b6cb0 70%);
+  }
+  .leds { display: flex; gap: 8px; }
+  .led { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(0,0,0,.35); }
+  h1 {
+    font-size: 2.1rem; letter-spacing: .5px; color: #fff;
+    text-shadow: 0 2px 0 #6e1714; margin-bottom: 4px;
+  }
+  .subtitle { color: #ffd9d7; font-size: .95rem; max-width: 520px; margin-bottom: 14px; }
+  .screen {
+    background: #1e2b1e; border: 3px solid #6e1714; border-radius: 10px;
+    padding: 10px 14px; color: #9be89b;
+    font-family: 'Courier New', monospace; font-size: .95rem;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.6);
+  }
+  .banner {
+    margin-top: 8px; color: #fff; background: #6e1714;
+    padding: 8px 12px; border-radius: 8px; font-size: .85rem;
+  }
+  .banner a { color: #f5c542; }
+  /* ── Navigation ── */
+  nav {
+    max-width: 860px; margin: 18px auto 10px; padding: 0 16px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .tab {
+    padding: 9px 18px; border-radius: 10px;
+    border: 2px solid #39415a; background: #242b3f; color: #aeb6cf;
+    font-weight: 700; font-size: .95rem; cursor: pointer; font-family: inherit;
+  }
+  .tab-on { background: #c9302b; border-color: #6e1714; color: #fff; }
+  select, input[type="search"] {
+    padding: 9px 12px; border-radius: 10px;
+    border: 2px solid #39415a; background: #242b3f; color: #e9ecf4;
+    font-size: .95rem; outline: none; font-family: inherit;
+  }
+  input[type="search"] { flex: 1; min-width: 180px; }
+  .tab:focus-visible, .card:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 3px solid #f5c542; outline-offset: 2px;
+  }
+  /* ── Grille ── */
+  #grid {
+    max-width: 860px; margin: 0 auto; padding: 6px 16px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 10px;
+  }
+  .card {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    padding: 10px 6px 12px; background: #242b3f;
+    border: 2px solid #39415a; border-radius: 14px;
+    cursor: pointer; color: inherit; font-family: inherit; text-align: center;
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .card:hover:not(:disabled) { transform: translateY(-2px); border-color: #c9302b; }
+  .card:disabled { opacity: .7; cursor: wait; }
+  .card-mine { border-color: #f5c542; background: #2c3350; }
+  .card .num { font-size: .72rem; color: #8b93ad; }
+  .card img { width: 72px; height: 72px; image-rendering: pixelated; margin: 2px auto; }
+  .card .name { font-weight: 700; font-size: .85rem; line-height: 1.15; color: #f2f4fa; }
+  .card .count { font-size: .75rem; color: #aeb6cf; margin-top: 2px; }
+  .badge {
+    position: absolute; top: 6px; right: 6px;
+    background: #f5c542; color: #4a3400;
+    font-size: .62rem; font-weight: 700; padding: 2px 6px; border-radius: 999px;
+  }
+  .empty { grid-column: 1 / -1; text-align: center; color: #aeb6cf; padding: 30px 10px; }
+  /* ── Classement ── */
+  #ranking {
+    max-width: 720px; margin: 0 auto; padding: 6px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .rank-row {
+    display: flex; align-items: center; gap: 12px;
+    background: #242b3f; border: 2px solid #39415a; border-radius: 14px;
+    padding: 8px 14px 8px 8px;
+  }
+  .rank-row:first-child { border-color: #f5c542; }
+  .rank-pos { width: 30px; text-align: center; font-weight: 800; font-size: 1.05rem; color: #f5c542; }
+  .rank-row img { width: 52px; height: 52px; image-rendering: pixelated; }
+  .rank-main { flex: 1; min-width: 0; }
+  .rank-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank-id { font-weight: 400; color: #8b93ad; font-size: .8rem; }
+  .bar-track { height: 8px; background: #1b2030; border-radius: 999px; margin-top: 5px; overflow: hidden; }
+  .bar-fill {
+    height: 100%; background: linear-gradient(90deg, #c9302b, #f5c542);
+    border-radius: 999px; transition: width .4s ease;
+  }
+  .rank-count {
+    font-weight: 800; min-width: 34px; text-align: right;
+    color: #9be89b; font-family: 'Courier New', monospace;
+  }
+  footer { text-align: center; color: #69718c; font-size: .78rem; margin-top: 28px; padding: 0 16px; }
+  .hidden { display: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .card, .card:hover, .bar-fill { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="dex">
+  <div class="dex-top">
+    <div class="lens"><div class="lens-inner"></div></div>
+    <div class="leds">
+      <span class="led" style="background:#e8433f"></span>
+      <span class="led" style="background:#f5c542"></span>
+      <span class="led" style="background:#4caf6d"></span>
+    </div>
+  </div>
+  <h1>PokéVote</h1>
+  <p class="subtitle">Quel est ton Pokémon préféré, toutes générations confondues ? Un vote par personne — tu peux le changer quand tu veux.</p>
+  <div class="screen" id="screen">Connexion au Pokédex…</div>
+  <div class="banner hidden" id="banner"></div>
+</header>
+
+<nav>
+  <button class="tab tab-on" id="tab-grid">Voter</button>
+  <button class="tab" id="tab-ranking">Classement</button>
+  <select id="gen-select" aria-label="Filtrer par génération">
+    <option value="0">Toutes les générations</option>
+  </select>
+  <input type="search" id="search" placeholder="Chercher un nom ou un n°…">
+</nav>
+
+<main id="grid"></main>
+<main id="ranking" class="hidden"></main>
+
+<footer>Les votes sont partagés entre tous les visiteurs · Sprites © Pokémon / PokéAPI · Fait par DEX</footer>
+
+<!-- Firebase (base de données temps réel pour les votes partagés) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ⚙️ CONFIGURATION FIREBASE — À REMPLIR (voir README.md)
+// Colle ici l'objet firebaseConfig de ton projet Firebase.
+// ════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyA0jO0glimTMB6dLAd1GIWX05rvavAiwRM",
+  authDomain: "pokevote-ced04.firebaseapp.com",
+  databaseURL: "https://pokevote-ced04-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "pokevote-ced04",
+  storageBucket: "pokevote-ced04.firebasestorage.app",
+  messagingSenderId: "398340883400",
+  appId: "1:398340883400:web:097bb2e5e4ad757c15b6fd"
+};
+
+// ─── Données : les 1025 Pokémon (noms français, Pokédex national) ───
+const RAW = `Bulbizarre|Herbizarre|Florizarre|Salamèche|Reptincel|Dracaufeu|Carapuce|Carabaffe|Tortank|Chenipan|Chrysacier|Papilusion|Aspicot|Coconfort|Dardargnan|Roucool|Roucoups|Roucarnage|Rattata|Rattatac|Piafabec|Rapasdepic|Abo|Arbok|Pikachu|Raichu|Sabelette|Sablaireau|Nidoran♀|Nidorina|Nidoqueen|Nidoran♂|Nidorino|Nidoking|Mélofée|Mélodelfe|Goupix|Feunard|Rondoudou|Grodoudou|Nosferapti|Nosferalto|Mystherbe|Ortide|Rafflesia|Paras|Parasect|Mimitoss|Aéromite|Taupiqueur|Triopikeur|Miaouss|Persian|Psykokwak|Akwakwak|Férosinge|Colossinge|Caninos|Arcanin|Ptitard|Têtarte|Tartard|Abra|Kadabra|Alakazam|Machoc|Machopeur|Mackogneur|Chétiflor|Boustiflor|Empiflor|Tentacool|Tentacruel|Racaillou|Gravalanch|Grolem|Ponyta|Galopa|Ramoloss|Flagadoss|Magnéti|Magnéton|Canarticho|Doduo|Dodrio|Otaria|Lamantine|Tadmorv|Grotadmorv|Kokiyas|Crustabri|Fantominus|Spectrum|Ectoplasma|Onix|Soporifik|Hypnomade|Krabby|Krabboss|Voltorbe|Électrode|Noeunoeuf|Noadkoko|Osselait|Ossatueur|Kicklee|Tygnon|Excelangue|Smogo|Smogogo|Rhinocorne|Rhinoféros|Leveinard|Saquedeneu|Kangourex|Hypotrempe|Hypocéan|Poissirène|Poissoroy|Stari|Staross|M. Mime|Insécateur|Lippoutou|Élektek|Magmar|Scarabrute|Tauros|Magicarpe|Léviator|Lokhlass|Métamorph|Évoli|Aquali|Voltali|Pyroli|Porygon|Amonita|Amonistar|Kabuto|Kabutops|Ptéra|Ronflex|Artikodin|Électhor|Sulfura|Minidraco|Draco|Dracolosse|Mewtwo|Mew|Germignon|Macronium|Méganium|Héricendre|Feurisson|Typhlosion|Kaiminus|Crocrodil|Aligatueur|Fouinette|Fouinar|Hoothoot|Noarfang|Coxy|Coxyclaque|Mimigal|Migalos|Nostenfer|Loupio|Lanturn|Pichu|Mélo|Toudoudou|Togepi|Togetic|Natu|Xatu|Wattouat|Lainergie|Pharamp|Joliflor|Marill|Azumarill|Simularbre|Tarpaud|Granivol|Floravol|Cotovol|Capumain|Tournegrin|Héliatronc|Yanma|Axoloto|Maraiste|Mentali|Noctali|Cornèbre|Roigada|Feuforêve|Zarbi|Qulbutoké|Girafarig|Pomdepik|Foretress|Insolourdo|Scorplane|Steelix|Snubbull|Granbull|Qwilfish|Cizayox|Caratroc|Scarhino|Farfuret|Teddiursa|Ursaring|Limagma|Volcaropod|Marcacrin|Cochignon|Corayon|Rémoraid|Octillery|Cadoizo|Démanta|Airmure|Malosse|Démolosse|Hyporoi|Phanpy|Donphan|Porygon2|Cerfrousse|Queulorior|Debugant|Kapoera|Lippouti|Élekid|Magby|Écrémeuh|Leuphorie|Raikou|Entei|Suicune|Embrylex|Ymphect|Tyranocif|Lugia|Ho-Oh|Celebi|Arcko|Massko|Jungko|Poussifeu|Galifeu|Braségali|Gobou|Flobio|Laggron|Medhyèna|Grahyèna|Zigzaton|Linéon|Chenipotte|Armulys|Charmillon|Blindalys|Papinox|Nénupiot|Lombre|Ludicolo|Grainipiot|Pifeuil|Tengalice|Nirondelle|Hélédelle|Goélise|Bekipan|Tarsal|Kirlia|Gardevoir|Arakdo|Maskadra|Balignon|Chapignon|Parecool|Vigoroth|Monaflèmit|Ningale|Ninjask|Munja|Chuchmur|Ramboum|Brouhabam|Makuhita|Hariyama|Azurill|Tarinor|Skitty|Delcatty|Ténéfix|Mysdibule|Galekid|Galegon|Galeking|Méditikka|Charmina|Dynavolt|Élecsprint|Posipi|Négapi|Muciole|Lumivole|Rosélia|Gloupti|Avaltout|Carvanha|Sharpedo|Wailmer|Wailord|Chamallot|Camérupt|Chartor|Spoink|Groret|Spinda|Kraknoix|Vibraninf|Libégon|Cacnea|Cacturne|Tylton|Altaria|Mangriff|Séviper|Séléroc|Solaroc|Barloche|Barbicha|Écrapince|Colhomard|Balbuto|Kaorine|Lilia|Vacilys|Anorith|Armaldo|Barpau|Milobellus|Morphéo|Kecleon|Polichombr|Branette|Skelénox|Téraclope|Tropius|Éoko|Absol|Okéoké|Stalgamin|Oniglali|Obalie|Phogleur|Kaimorse|Coquiperl|Serpang|Rosabyss|Relicanth|Lovdisc|Draby|Drackhaus|Drattak|Terhal|Métang|Métalosse|Regirock|Regice|Registeel|Latias|Latios|Kyogre|Groudon|Rayquaza|Jirachi|Deoxys|Tortipouss|Boskara|Torterra|Ouisticram|Chimpenfeu|Simiabraz|Tiplouf|Prinplouf|Pingoléon|Étourmi|Étourvol|Étouraptor|Keunotor|Castorno|Crikzik|Mélokrik|Lixy|Luxio|Luxray|Rozbouton|Roserade|Kranidos|Charkos|Dinoclier|Bastiodon|Cheniti|Cheniselle|Papilord|Apitrini|Apireine|Pachirisu|Mustébouée|Mustéflott|Ceribou|Ceriflor|Sancoki|Tritosor|Capidextre|Baudrive|Grodrive|Laporeille|Lockpin|Magirêve|Corboss|Chaglam|Chaffreux|Korillon|Moufouette|Moufflair|Archéomire|Archéodong|Manzaï|Mime Jr.|Ptiravi|Pijako|Spiritomb|Griknot|Carmache|Carchacrok|Goinfrex|Riolu|Lucario|Hippopotas|Hippodocus|Rapion|Drascore|Cradopaud|Coatox|Vortente|Écayon|Luminéon|Babimanta|Blizzi|Blizzaroi|Dimoret|Magnézone|Coudlangue|Rhinastoc|Bouldeneu|Élekable|Maganon|Togekiss|Yanmega|Phyllali|Givrali|Scorvol|Mammochon|Porygon-Z|Gallame|Tarinorme|Noctunoir|Momartik|Motisma|Créhelf|Créfollet|Créfadet|Dialga|Palkia|Heatran|Regigigas|Giratina|Cresselia|Phione|Manaphy|Darkrai|Shaymin|Arceus|Victini|Vipélierre|Lianaja|Majaspic|Gruikui|Grotichon|Roitiflam|Moustillon|Mateloutre|Clamiral|Ratentif|Miradar|Ponchiot|Ponchien|Mastouffe|Chacripan|Léopardus|Feuillajou|Feuiloutan|Flamajou|Flamoutan|Flotajou|Flotoutan|Munna|Mushana|Poichigeon|Colombeau|Déflaisan|Zébibron|Zéblitz|Nodulithe|Géolithe|Gigalithe|Chovsourir|Rhinolove|Rototaupe|Minotaupe|Nanméouïe|Charpenti|Ouvrifier|Bétochef|Tritonde|Batracné|Crapustule|Judokrak|Karaclée|Larveyette|Couverdure|Manternel|Venipatte|Scobolide|Brutapode|Doudouvet|Farfaduvet|Chlorobule|Fragilady|Bargantua|Mascaïman|Escroco|Crocorible|Darumarond|Darumacho|Maracachi|Crabicoque|Crabaraque|Baggiguane|Baggaïd|Cryptéro|Tutafeh|Tutankafer|Carapagos|Mégapagos|Arkéapti|Aéroptéryx|Miamiasme|Miasmax|Zorua|Zoroark|Chinchidou|Pashmilla|Scrutella|Mesmérella|Sidérella|Nucléos|Méios|Symbios|Couaneton|Lakmécygne|Sorbébé|Sorboul|Sorbouboul|Vivaldaim|Haydaim|Emolga|Carabing|Lançargot|Trompignon|Gaulet|Viskuse|Moyade|Mamanbo|Statitik|Mygavolt|Grindur|Noacier|Tic|Clic|Cliticlic|Anchwatt|Lampéroie|Ohmassacre|Lewsor|Neitram|Funécire|Mélancolux|Lugulabre|Coupenotte|Incisache|Tranchodon|Polarhume|Polagriffe|Hexagel|Escargaume|Limaspeed|Limonde|Kungfouine|Shaofouine|Drakkarmin|Gringolem|Golemastoc|Scalpion|Scalproie|Frison|Furaiglon|Gueriaigle|Vostourno|Vaututrice|Aflamanoir|Fermite|Solochi|Diamat|Trioxhydre|Pyronille|Pyrax|Cobaltium|Terrakium|Viridium|Boréas|Fulguris|Reshiram|Zekrom|Démétéros|Kyurem|Keldeo|Meloetta|Genesect|Marisson|Boguérisse|Blindépique|Feunnec|Roussil|Goupelin|Grenousse|Croâporal|Amphinobi|Sapereau|Excavarenne|Passerouge|Braisillon|Flambusard|Lépidonille|Pérégrain|Prismillon|Hélionceau|Némélios|Flabébé|Floette|Florges|Cabriolaine|Chevroum|Pandespiègle|Pandarbare|Couafarel|Psystigri|Mistigrix|Monorpale|Dimoclès|Exagide|Fluvetin|Cocotine|Sucroquin|Cupcanaille|Sepiatop|Sepiatroce|Opermine|Golgopathe|Venalgue|Kravarech|Flingouste|Gamblast|Galvaran|Iguolta|Ptyranidur|Rexillius|Amagara|Dragmara|Nymphali|Brutalibré|Dedenne|Strassie|Mucuscule|Colimucus|Muplodocus|Trousselin|Brocélôme|Desséliande|Pitrouille|Banshitrouye|Grelaçon|Séracrawl|Sonistrelle|Bruyverne|Xerneas|Yveltal|Zygarde|Diancie|Hoopa|Volcanion|Brindibou|Efflèche|Archéduc|Flamiaou|Matoufeu|Félinferno|Otaquin|Otarlette|Oratoria|Picassaut|Piclairon|Bazoucan|Manglouton|Argouste|Larvibule|Chrysapile|Lucanon|Crabagarre|Crabominable|Plumeline|Bombydou|Rubombelle|Rocabot|Lougaroc|Froussardine|Vorastérie|Prédastérie|Tiboudet|Bourrinos|Araqua|Tarenbulle|Mimantis|Floramantis|Spododo|Lampignon|Tritox|Malamandre|Nounourson|Chelours|Croquine|Candine|Sucreine|Guérilande|Gouroutan|Quartermac|Sovkipou|Sarmuraï|Bacabouh|Trépassable|Concombaffe|Type:0|Silvallié|Météno|Dodoala|Boumata|Togedemaru|Mimiqui|Denticrisse|Draïeul|Sinistrail|Bébécaille|Écaïd|Ékaïser|Tokorico|Tokopiyon|Tokotoro|Tokopisco|Cosmog|Cosmovum|Solgaleo|Lunala|Zéroïd|Mouscoto|Cancrelove|Câblifère|Bamboiselle|Katagami|Engloutyran|Necrozma|Magearna|Marshadow|Vémini|Mandrillon|Ama-Ama|Pierroteknik|Zeraora|Meltan|Melmetal|Ouistempo|Badabouin|Gorythmic|Flambino|Lapyro|Pyrobut|Larméléon|Arrozard|Lézargus|Rongourmand|Rongrigou|Minisange|Bleuseille|Corvaillus|Larvadar|Coléodôme|Astronelle|Goupilou|Roublenard|Tournicoton|Blancoton|Moumouton|Moumouflon|Khélocrok|Torgamord|Voltoutou|Fulgudog|Charbi|Wagomine|Monthracite|Verpom|Pomdrapi|Dratatin|Dunaja|Dunaconda|Nigosier|Embrochet|Hastacuda|Toxizap|Salarsen|Grillepattes|Scolocendre|Poulpaf|Krakos|Théffroi|Polthégeist|Bibichut|Chapotus|Sorcilence|Grimalin|Fourbelin|Angoliath|Ixon|Berserkatt|Corayôme|Palarticho|M. Glaquette|Tutétékri|Crèmy|Charmilly|Hexadron|Wattapik|Frissonille|Beldeneige|Dolman|Bekaglaçon|Wimessir|Morpeko|Charibari|Pachyradjah|Galvagon|Galvagla|Hydragon|Hydragla|Duralugon|Fantyrm|Dispareptil|Lanssorien|Zacian|Zamazenta|Éthernatos|Wushours|Shifours|Zarude|Regieleki|Regidrago|Blizzeval|Spectreval|Sylveroy|Cerbyllin|Hachécateur|Ursaking|Paragruel|Farfurex|Qwilpik|Amovénus|Poussacha|Matourgeon|Miascarade|Chochodile|Crocogril|Flâmigator|Coiffeton|Canarbello|Palmaval|Gourmelet|Fragroin|Tissenboule|Filentrappe|Lilliterelle|Gambex|Pohm|Pohmotte|Pohmarmotte|Compagnol|Famignol|Pâtachiot|Briochien|Olivini|Olivado|Arboliva|Tapatoès|Selutin|Amassel|Gigansel|Charbambin|Carmadura|Malvalame|Têtampoule|Ampibidou|Zapétrel|Fulgulairo|Grondogue|Dogrino|Gribouraigne|Tag-Tag|Virovent|Virevorreur|Terracool|Terracruel|Craparoi|Pimito|Scovilain|Léboulérou|Bérasca|Flotillon|Cléopsytra|Forgerette|Forgella|Forgelina|Taupikeau|Triopikeau|Lestombaile|Dofin|Superdofin|Vrombi|Vrombotor|Motorizard|Ferdeter|Germéclat|Floréclat|Toutombe|Tomberro|Flamenroule|Piétacé|Balbalèze|Délestin|Oyacata|Nigirigon|Courrousinge|Terraiste|Farigiraf|Deusolourdo|Scalpereur|Fort-Ivoire|Hurle-Queue|Fongus-Furie|Flotte-Mèche|Rampe-Ailes|Pelage-Sablé|Roue-de-Fer|Hotte-de-Fer|Paume-de-Fer|Têtes-de-Fer|Mite-de-Fer|Épine-de-Fer|Frigodo|Cryodo|Glaivodo|Mordudor|Gromago|Chongjian|Baojian|Dinglu|Yuyu|Rugit-Lune|Garde-de-Fer|Koraidon|Miraidon|Serpente-Eau|Vert-de-Fer|Pomdramour|Poltchageist|Théffroyable|Félicanis|Fortusimia|Favianos|Ogerpon|Pondralugon|Pomdorochi|Feu-Perçant|Ire-Foudre|Roc-de-Fer|Chef-de-Fer|Terapagos|Pêchaminus`;
+const POKEMON = RAW.split("|").map((name, i) => ({ id: i + 1, name }));
+const GENS = [[1,151],[152,251],[252,386],[387,493],[494,649],[650,721],[722,809],[810,905],[906,1025]];
+const genOf = id => GENS.findIndex(([a, b]) => id >= a && id <= b) + 1;
+const sprite = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+const artwork = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+
+// ─── État ───
+let votes = {};                 // { "25": 12, ... } — synchronisé Firebase
+let myVote = parseInt(localStorage.getItem("pokevote-my-vote"), 10) || null;
+let saving = false;
+let db = null;
+
+const $ = id => document.getElementById(id);
+const screen = $("screen"), banner = $("banner");
+const grid = $("grid"), ranking = $("ranking");
+const searchInput = $("search"), genSelect = $("gen-select");
+
+// ─── Firebase ───
+const configOk = firebaseConfig.apiKey && firebaseConfig.databaseURL;
+if (configOk) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  db.ref("votes").on("value", snap => {
+    votes = snap.val() || {};
+    updateScreen();
+    renderGrid();
+    renderRanking();
+  }, err => {
+    showBanner("Impossible de lire les votes (vérifie les règles de la base). " + err.message);
+  });
+} else {
+  showBanner("Configuration Firebase manquante : les votes sont désactivés. Ouvre index.html et remplis firebaseConfig (voir README.md).");
+  updateScreen();
+}
+
+function showBanner(msg) {
+  banner.textContent = msg;
+  banner.classList.remove("hidden");
+}
+
+async function voteFor(id) {
+  if (!db || saving || id === myVote) return;
+  saving = true;
+  renderGrid();
+  try {
+    const old = myVote;
+    if (old != null) {
+      await db.ref("votes/" + old).transaction(c => Math.max(0, (c || 0) - 1));
+    }
+    await db.ref("votes/" + id).transaction(c => (c || 0) + 1);
+    myVote = id;
+    localStorage.setItem("pokevote-my-vote", String(id));
+  } catch (e) {
+    showBanner("Le vote n'a pas pu être enregistré. Réessaie.");
+  }
+  saving = false;
+  updateScreen();
+  renderGrid();
+  renderRanking();
+}
+
+// ─── Rendu ───
+function totalVotes() {
+  return Object.values(votes).reduce((a, b) => a + (b || 0), 0);
+}
+
+function updateScreen() {
+  const t = totalVotes();
+  const plural = t > 1 ? "s" : "";
+  if (!configOk) {
+    screen.textContent = "Mode hors ligne — votes désactivés";
+  } else if (myVote) {
+    screen.innerHTML = `Ton favori : <b>${POKEMON[myVote - 1].name}</b> · ${t} vote${plural} au total`;
+  } else {
+    screen.textContent = `Aucun vote enregistré — choisis ton favori ! (${t} vote${plural} au total)`;
+  }
+}
+
+function currentFilter() {
+  const q = searchInput.value.trim().toLowerCase();
+  const gen = parseInt(genSelect.value, 10);
+  return POKEMON.filter(p => {
+    if (gen > 0 && genOf(p.id) !== gen) return false;
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q) || String(p.id) === q.replace(/^0+/, "");
+  });
+}
+
+function renderGrid() {
+  const list = currentFilter();
+  if (!list.length) {
+    grid.innerHTML = `<p class="empty">Aucun Pokémon ne correspond à « ${escapeHtml(searchInput.value)} ». Vérifie l'orthographe ou essaie un numéro (1 à 1025).</p>`;
+    return;
+  }
+  grid.innerHTML = list.map(p => {
+    const c = votes[p.id] || 0;
+    const mine = p.id === myVote;
+    return `<button class="card${mine ? " card-mine" : ""}" data-id="${p.id}" ${saving ? "disabled" : ""}
+      title="${mine ? "Ton favori actuel" : "Voter pour " + escapeHtml(p.name)}">
+      <span class="num">n°${String(p.id).padStart(3, "0")}</span>
+      <img src="${sprite(p.id)}" alt="${escapeHtml(p.name)}" loading="lazy"
+           onerror="this.onerror=null;this.src='${artwork(p.id)}'">
+      <span class="name">${escapeHtml(p.name)}</span>
+      <span class="count">${c > 0 ? c + " vote" + (c > 1 ? "s" : "") : "—"}</span>
+      ${mine ? '<span class="badge">Ton favori</span>' : ""}
+    </button>`;
+  }).join("");
+}
+
+function renderRanking() {
+  const rows = POKEMON
+    .map(p => ({ ...p, count: votes[p.id] || 0 }))
+    .filter(p => p.count > 0)
+    .sort((a, b) => b.count - a.count || a.id - b.id);
+  if (!rows.length) {
+    ranking.innerHTML = `<p class="empty">Personne n'a encore voté. Sois le premier — va dans l'onglet « Voter » !</p>`;
+    return;
+  }
+  const max = rows[0].count;
+  ranking.innerHTML = rows.map((p, i) => `
+    <div class="rank-row">
+      <span class="rank-pos">${i + 1}</span>
+      <img src="${sprite(p.id)}" alt="" onerror="this.onerror=null;this.src='${artwork(p.id)}'">
+      <div class="rank-main">
+        <div class="rank-name">${escapeHtml(p.name)}<span class="rank-id"> n°${String(p.id).padStart(3, "0")}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(p.count / max) * 100}%"></div></div>
+      </div>
+      <span class="rank-count">${p.count}</span>
+    </div>`).join("");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ─── Événements ───
+grid.addEventListener("click", e => {
+  const card = e.target.closest(".card");
+  if (card) voteFor(parseInt(card.dataset.id, 10));
+});
+searchInput.addEventListener("input", renderGrid);
+genSelect.addEventListener("change", renderGrid);
+$("tab-grid").addEventListener("click", () => switchTab("grid"));
+$("tab-ranking").addEventListener("click", () => switchTab("ranking"));
+
+function switchTab(t) {
+  grid.classList.toggle("hidden", t !== "grid");
+  ranking.classList.toggle("hidden", t !== "ranking");
+  searchInput.classList.toggle("hidden", t !== "grid");
+  genSelect.classList.toggle("hidden", t !== "grid");
+  $("tab-grid").classList.toggle("tab-on", t === "grid");
+  $("tab-ranking").classList.toggle("tab-on", t === "ranking");
+}
+
+// ─── Init ───
+for (let i = 1; i <= GENS.length; i++) {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = "Génération " + i;
+  genSelect.appendChild(opt);
+}
+updateScreen();
+renderGrid();
+renderRanking();
+</script>
+</body>
+</html>
